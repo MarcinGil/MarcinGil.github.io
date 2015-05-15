@@ -59,91 +59,182 @@
           </div>
           <a name="topofpage"></a>
           <p>For some time I was looking for a way to develop MS SQL connected application on Linux. I want to create a bridge between two applications and one of them stores data in Microsoft SQL. Since Kubuntu Linux is my development platform of choice I needed a way to be able to connect to the database from my system.</p>
-<p>There are several obstacles to overcome, of which the most annoying is that you can't put MS SQL on Linux directly. There might be a dozen solutions to this (like having an additional Windows/MS SQL server) I prefer to keep all the needed things on my dev box.</p>
-<p>Since I have Windows 7 RC downloaded and there's a free download of <a href="http://www.microsoft.com/Sqlserver/2005/en/us/express.aspx">Microsoft SQL Server Express 2005</a> I decided to put Virtual Box to hard work for me.</p>
-<p><!--more--></p>
-<h2>VirtualBox with Windows 7</h2>
-<p>First we need Virtualbox itself. Since I'm on Kubuntu I'll use <a href="http://www.virtualbox.org/wiki/Linux_Downloads">the Debian Way</a> to get it. It's easy from there: add deb source, apt-get update, apt-get install virtualbox-3.0.</p>
+
+<p>There are several obstacles to overcome, of which the most annoying is that you can’t put MS SQL on Linux directly. There might be a dozen solutions to this (like having an additional Windows/MS SQL server) I prefer to keep all the needed things on my dev box.
+Since I have Windows 7 RC downloaded and there’s a free download of <a href="http://www.microsoft.com/Sqlserver/2005/en/us/express.aspx">Microsoft SQL Server Express 2005</a> I decided to put Virtual Box to hard work for me.
+<!--more--></p>
+
+<h2 id="virtualbox-with-windows-7">VirtualBox with Windows 7</h2>
+
+<p>First we need Virtualbox itself. Since I’m on Kubuntu I’ll use <a href="http://www.virtualbox.org/wiki/Linux_Downloads">the Debian Way</a> to get it. It’s easy from there: add deb source, apt-get update, apt-get install virtualbox-3.0.</p>
+
 <p>Start VirtualBox and create a new virtual machine for Windows 7. Whether to use dynamic or fixed size hard disk is not important here. I personally used a 10G dynamic size drive.</p>
-<p>All the settings can be left on default, except one: networking. MS SQL talks TCP and this is the simplest way to get working with. I've used <a href="http://www.virtualbox.org/manual/UserManual.html#network_hostonly"><em>Host-only Adapter</em></a> as Internet will not be accessed from virtualized Windows.</p>
-<p>Startup VM and install Windows.</p>
+
+<p>All the settings can be left on default, except one: networking. MS SQL talks TCP and this is the simplest way to get working with. I’ve used <a href="http://www.virtualbox.org/manual/UserManual.html#network_hostonly"><em>Host-only Adapter</em></a> as Internet will not be accessed from virtualized Windows.
+Startup VM and install Windows.</p>
+
 <p><strong>Remember to install <em>VirtualBox Guest Additions</em>!</strong></p>
-<p>After this step we have working virtualized installation of Windows 7 and visible <code>vboxnet0</code> network interface on Linux. This <code>vboxnet0</code> is a gateway to virtual machines' network.</p>
+
+<p>After this step we have working virtualized installation of Windows 7 and visible <code>vboxnet0</code> network interface on Linux. This <code>vboxnet0</code> is a gateway to virtual machines’ network.</p>
+
 <p>To test it, check the IP of Windows 7 connection and ping it. For me it was <em>192.168.56.101</em> and <code>vboxnet0</code> has IP <em>192.168.56.1</em>.</p>
-<h2>Microsoft SQL installation and configuration</h2>
-<p>To get MS SQL installation file from Linux host to Windows guest I used <a href="http://www.virtualbox.org/manual/UserManual.html#sharedfolders">VirtualBox shared folders</a> functionality.</p>
-<p>Next install MS SQL the usual way. There are only two things to watch out for:</p>
-<ol>
-<li>don't forget to install connectivity components</li>
-<li>use <em>Mixed authentication</em> (meaning both <em>Windows Authentication</em> and <em>SQL authentication</em>)</li>
-</ol>
-<p>Usually TCP connectivity is disabled for SQL server. We can use <em>SQL Server Configuration Manager</em> (comes with the install) to turn it on.</p>
-<p>By default Windows Firewall blocks all incoming connections and MS SQL is not on the <em>allowed</em> list. Either you have to disable firewall completely or whitelist <code>sqlservr</code> (<em>C:\Program Files\Microsoft SQL Server\MSSQL.1\MSSQL\Binn\sqlservr.exe</em>) and <code>sqlbrowser</code> (<em>C:\Program Files\Microsoft SQL Server\90\Shared\sqlbrowser.exe</em>).</p>
-<p>For hardcore testing you can install <code>nmap</code> utility and check if port <em>1433</em> is open (this is default UDP port for SQL browser):</p>
-<p>[cc]$ sudo nmap -PN -sU -p 1433 192.168.56.101 [/cc]</p>
-<p><em>If you don't know the <code>nmap</code> tool, consult its manpage.</em></p>
-<h2>TDS access configuration</h2>
-<p><a href="http://en.wikipedia.org/wiki/Tabular_Data_Stream">TDS</a> is a protocol that Sybase and MSSQL databases use natively. Linux has a <a href="http://www.freetds.org/">FreeTDS</a> library that knows how to speak that protocol and is used by other libraries and tools like ODBC.</p>
-<p>Install it:</p>
-<p>[cc]$ sudo apt-get install freetds-bin [/cc]</p>
-<p>and we have all tools necessary to connect to our MSSQL instance.</p>
-<p>We will configure SQL access only for ourselves, so all the settings go to <code>~/.freetds.conf</code>:</p>
-<p>&#91;cc&#93; &#91;sqlexpress&#93; host = 192.168.56.101 instance = SQLEXPRESS tds version = 8.0 [/cc]</p>
-<p>A short explanation of above lines:</p>
-<ol>
-<li>This defines an alias, a block name, that will contain our connection parameters; choose what you want.</li>
-<li>Name or IP of host that MS SQL sits on.</li>
-<li>Named instance of MS SQL Server; For SQL Server 2005 Express it is SQLEXPRESS. If there's no named instance you can specify <code>port</code> value, usually <em>1433</em>.</li>
-<li>TDS protocol version used by the database.</li>
-</ol>
-<h3>Testing TDS connection</h3>
-<p>With <code>freetds-bin</code> packages comes <code>tsql</code>:</p>
-<p>[cc]$ tsql -S sqlexpress -U sa locale is "en_US.UTF-8" locale charset is "UTF-8" Password: 1> [/cc]</p>
-<p>The <code>-S</code> parameter selects our named configuration and <code>-U</code> is username. Default admin access to MS SQL server is <code>sa</code> (<em>system administrator</em>) with no password.</p>
-<p>If you don't get the <code>1&gt;</code> prompt but instead you see a counter than it usually mean there's a problem connecting to the target host.</p>
-<p>Enable debugging by setting <code>TDSDUMP</code> to a log filepath:</p>
-<p>[cc]$ TDSDUMP=~/freetds.log tsql -S sqlexpress -U sa [/cc]</p>
-<p>and check the log file.</p>
-<h2>ODBC Setup</h2>
-<p>Since ODBC is quite standard way to connect to DBs we can use it for our software. In my Kubuntu <code>unixodbc</code> package was already installed. For TDS ODBC driver install:</p>
-<p>[cc]$ sudo apt-get install tdsodbc [/cc]</p>
-<p>Next we need to define a driver configuration for TDS. The usual way is to prepare a driver config template. To do this create and edit a file eg.: <code>tds.driver.template</code> with contents:</p>
-<p>&#91;cc&#93; &#91;FreeTDS&#93; Description = Free Sybase &amp; MS SQL Driver Driver = /usr/lib/odbc/libtdsodbc.so Setup = /usr/ilb/odbc/libtdsS.so [/cc]</p>
-<p>and install this driver to ODBC:</p>
-<p>[cc]$ sudo odbcinst -i -d -f tds.driver.template [/cc]</p>
-<p>As a result a <code>/etc/odbcinst.ini</code> should be created with additional <em>UsageCount = 1</em> line. If not, create this file by hand eg. by copying <code>tds.driver.template</code> and adding that line.</p>
-<p>Next we need to create a <abbr title="Data Source Name">DSN</abbr> for our connection. To check which files are read by unixODBC library in search for DSNs just run</p>
-<p>[cc]$ odbcinst -j [/cc]</p>
-<p>In my case system data sources (global DSNs) are in <code>/etc/odbc.ini</code> and personal ones are in <code>~/.odbc.ini</code>.</p>
-<p>Contents of this file should be pretty self-explanatory:</p>
-<p>&#91;cc&#93;&#91;sqlexpress&#93; Driver = FreeTDS Description = MS SQL Server 2005 at virtual W7 Trace = No Servername = sqlexpress Database = master [/cc]</p>
-<p>The <code>Driver</code> is an identifier taken from <code>/etc/odbcinst.ini</code>; <code>Servername</code> is identifier of our TDS connection from <code>.freetds.conf</code>. As there are no custom databases on our server we connect to the <code>master</code> DB.</p>
-<p>Now test the connection (be sure to have W7 running!):</p>
-<p>[cc]$ isql -v sqlexpress sa +&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|+ | Connected! | | | | sql-statement | | help [tablename] | | quit | | | +&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|&#45;--|+ SQL> [/cc]</p>
-<p>If instead you have something like this:</p>
-<p>&#91;cc]$ isql -v sqlexpress sa [IM002&#93;&#91;unixODBC&#93;[Driver Manager]Data source name not found, and no default driver specified [ISQL]ERROR: Could not SQLConnect [/cc]</p>
-<p>be sure that each line in both <code>.freetds.conf</code> and <code>.odbc.ini</code> <strong>begins at column 0</strong>.</p>
-<h2>Connecting from Qt</h2>
-<p>Now all this hard work can be put to some sensible use! We shall connect to our database from Qt framework. I've used recent <em>4.5</em> version present in Kubuntu Karmic repositories.</p>
-<p>Create a simple Qt console application. Your <code>main</code> should look similar to this:</p>
-<p>[cc lang="c++"] int main(int argc, char *argv[]) { QCoreApplication a(argc, argv);</p>
-<pre><code>QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-db.setDatabaseName("sqlexpress");
-db.setUserName("sa");
-db.setPassword("");
 
-if (db.open()) {
-    qDebug("It worked");
-}
-else {
-    qDebug("FAIL");
-}
+<h2 id="microsoft-sql-installation-and-configuration">Microsoft SQL installation and configuration</h2>
 
-return 0;
+<p>To get MS SQL installation file from Linux host to Windows guest I used <a href="http://www.virtualbox.org/manual/UserManual.html#sharedfolders">VirtualBox shared folders</a> functionality.
+Next install MS SQL the usual way. There are only two things to watch out for:</p>
+
+<ul>
+  <li>don’t forget to install connectivity components</li>
+  <li>use <em>Mixed authentication</em> (meaning both <em>Windows Authentication</em> and <em>SQL authentication</em>)</li>
+</ul>
+
+<p>Usually TCP connectivity is disabled for SQL server. We can use <em>SQL Server Configuration Manager</em> (comes with the install) to turn it on.
+By default Windows Firewall blocks all incoming connections and MS SQL is not on the <em>allowed</em> list. Either you have to disable firewall completely or whitelist <code>sqlservr</code> (<em>C:\Program Files\Microsoft SQL Server\MSSQL.1\MSSQL\Binn\sqlservr.exe</em>) and <code>sqlbrowser</code> (<em>C:\Program Files\Microsoft SQL Server\90\Shared\sqlbrowser.exe</em>).
+For hardcore testing you can install <code>nmap</code> utility and check if port <em>1433</em> is open (this is default UDP port for SQL browser):</p>
+
+<pre><code>$ sudo nmap -PN -sU -p 1433 192.168.56.101
 </code></pre>
-<p>} [/cc]</p>
-<p>You should see <em>"It worked"</em> at debug console when you run this code.</p>
-<h2>Final thoughts</h2>
+
+<p><em>If you don’t know the *nmap* tool, consult its manpage.</em></p>
+
+<h2 id="tds-access-configuration">TDS access configuration</h2>
+<p><a href="http://en.wikipedia.org/wiki/Tabular_Data_Stream">TDS</a> is a protocol that Sybase and MSSQL databases use natively. Linux has a <a href="http://www.freetds.org/">FreeTDS</a> library that knows how to speak that protocol and is used by other libraries and tools like ODBC.</p>
+
+<p>Install it:</p>
+
+<pre><code>$ sudo apt-get install freetds-bin
+</code></pre>
+
+<p>and we have all tools necessary to connect to our MSSQL instance.</p>
+
+<p>We will configure SQL access only for ourselves, so all the settings go to <code>~/.freetds.conf</code>:</p>
+
+<pre><code>[sqlexpress]
+host = 192.168.56.101
+instance = SQLEXPRESS
+tds version = 8.0
+</code></pre>
+
+<p>A short explanation of above lines:</p>
+
+<ul>
+  <li>This defines an alias, a block name, that will contain our connection parameters; choose what you want.</li>
+  <li>Name or IP of host that MS SQL sits on.</li>
+  <li>Named instance of MS SQL Server; For SQL Server 2005 Express it is SQLEXPRESS. If there’s no named instance you can specify <code>port</code> value, usually <em>1433</em>.</li>
+  <li>TDS protocol version used by the database.</li>
+</ul>
+
+<h3 id="testing-tds-connection">Testing TDS connection</h3>
+
+<p>With <code>freetds-bin</code> packages comes <code>tsql</code>:</p>
+
+<pre><code>$ tsql -S sqlexpress -U sa
+locale is "en_US.UTF-8"
+locale charset is "UTF-8"
+Password:
+1&gt;
+</code></pre>
+
+<p>The <code>-S</code> parameter selects our named configuration and <code>-U</code> is username. Default admin access to MS SQL server is <code>sa</code> (<em>system administrator</em>) with no password.</p>
+
+<p>If you don’t get the <code>1&gt;</code> prompt but instead you see a counter than it usually mean there’s a problem connecting to the target host.
+Enable debugging by setting <code>TDSDUMP</code> to a log filepath:</p>
+
+<pre><code>$ TDSDUMP=~/freetds.log tsql -S sqlexpress -U sa
+</code></pre>
+
+<p>and check the log file.</p>
+
+<h2 id="odbc-setup">ODBC Setup</h2>
+
+<p>Since ODBC is quite standard way to connect to DBs we can use it for our software. In my Kubuntu <code>unixodbc</code> package was already installed. For TDS ODBC driver install:</p>
+
+<pre><code>$ sudo apt-get install tdsodbc
+</code></pre>
+
+<p>Next we need to define a driver configuration for TDS. The usual way is to prepare a driver config template. To do this create and edit a file eg.: <code>tds.driver.template</code> with contents:</p>
+
+<pre><code>[FreeTDS]
+Description = Free Sybase &amp; MS SQL Driver
+Driver = /usr/lib/odbc/libtdsodbc.so
+Setup = /usr/ilb/odbc/libtdsS.so
+</code></pre>
+
+<p>and install this driver to ODBC:</p>
+
+<pre><code>$ sudo odbcinst -i -d -f tds.driver.template
+</code></pre>
+
+<p>As a result a <code>/etc/odbcinst.ini</code> should be created with additional <em>UsageCount = 1</em> line. If not, create this file by hand eg. by copying <code>tds.driver.template</code> and adding that line.</p>
+
+<p>Next we need to create a *[DSN]:”Data Source Name” for our connection. To check which files are read by unixODBC library in search for DSNs just run:</p>
+
+<pre><code>$ odbcinst -j
+</code></pre>
+
+<p>In my case system data sources (global DSNs) are in <code>/etc/odbc.ini</code> and personal ones are in <code>~/.odbc.ini</code>.
+Contents of this file should be pretty self-explanatory:</p>
+
+<pre><code>[sqlexpress]
+Driver = FreeTDS
+Description = MS SQL Server 2005 at virtual W7
+Trace = No
+Servername = sqlexpress
+Database = master
+</code></pre>
+
+<p>The <code>Driver</code> is an identifier taken from <code>/etc/odbcinst.ini</code>; <code>Servername</code> is identifier of our TDS connection from <code>.freetds.conf</code>. As there are no custom databases on our server we connect to the <code>master</code> DB.</p>
+
+<p>Now test the connection (be sure to have W7 running!):</p>
+
+<pre><code>$ isql -v sqlexpress sa
++---------------------------------------------------+
+| Connected!                                        |
+| sql-statement                                     | 
+| help [tablename]                                  | 
+| quit                                              |
++---------------------------------------------------+
+SQL&gt;
+</code></pre>
+
+<p>If instead you have something like this:</p>
+
+<pre><code>$ isql -v sqlexpress sa
+[IM002][unixODBC][Driver Manager] Data source name not found, and no default driver specified
+[ISQL]ERROR: Could not SQLConnect
+</code></pre>
+
+<p>be sure that each line in both <code>.freetds.conf</code> and <code>.odbc.ini</code> <strong>begins at column 0</strong>.</p>
+
+<h2 id="connecting-from-qt">Connecting from Qt</h2>
+
+<p>Now all this hard work can be put to some sensible use! We shall connect to our database from Qt framework. I’ve used recent <em>4.5</em> version present in Kubuntu Karmic repositories.</p>
+
+<p>Create a simple Qt console application. Your <code>main</code> should look similar to this:</p>
+
+<pre><code class="language-c">int main(int argc, char *argv[]) {
+    QCoreApplication a(argc, argv);
+
+    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
+    db.setDatabaseName("sqlexpress");
+    db.setUserName("sa");
+    db.setPassword("");
+
+    if (db.open()) {
+        qDebug("It worked");
+    }
+    else {
+        qDebug("FAIL");
+    }
+
+    return 0;
+}
+</code></pre>
+
+<p>You should see <em>“It worked”</em> at debug console when you run this code.</p>
+
+<h2 id="final-thoughts">Final thoughts</h2>
 <p>By now we have a working virtualized Windows 7 with MS SQL server, we are able to connect to it using native TDS protocol and through ODBC. This connection can now be used from <a href="http://php.net/manual/en/book.uodbc.php">PHP</a>, Qt, Ruby - you name it.</p>
 
         </section>
