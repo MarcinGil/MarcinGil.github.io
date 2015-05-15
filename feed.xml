@@ -6,8 +6,8 @@
 </description>
     <link>http://blog.marcingil.com/</link>
     <atom:link href="http://blog.marcingil.com/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Fri, 15 May 2015 22:52:46 +0200</pubDate>
-    <lastBuildDate>Fri, 15 May 2015 22:52:46 +0200</lastBuildDate>
+    <pubDate>Fri, 15 May 2015 22:55:43 +0200</pubDate>
+    <lastBuildDate>Fri, 15 May 2015 22:55:43 +0200</lastBuildDate>
     <generator>Jekyll v2.4.0</generator>
     
       <item>
@@ -219,9 +219,9 @@ manager.setReturnTo(&quot;http://www.openid-example.com/openId&quot;);[/cc]&lt;/
         <title>QSqlDatabase ODBC connection to MS SQL Express 2005</title>
         <description>&lt;p&gt;In &lt;a href=&quot;http://blog.marcingil.com/linux-odbc-to-mssql/&quot;&gt;last post&lt;/a&gt; I’ve written a recipe how to connect from Linux to Microsoft SQL Server Express using ODBC. Now, since I’m using Qt framework for app portability, it is the time to do the same on Windows.&lt;/p&gt;
 
-&lt;p&gt;One can connect two ways to MS SQL: using ODBC or *[TDS]:”Tabular Data stream” - SQL Server’s native protocol. With new release of &lt;a href=&quot;http://qt.nokia.com/downloads/sdk-windows-cpp&quot;&gt;Qt SDK&lt;/a&gt; there is a QSqlOdbc4 driver bundled. No TDS driver is available for Microsoft’s native protocol.&lt;/p&gt;
-
-&lt;p&gt;It is quite easy to connect to DB without having to define a *[DSN]:”Data Source Name” first, just use proper connection string:&lt;/p&gt;
+&lt;p&gt;One can connect two ways to MS SQL: using ODBC or *[TDS]:”Tabular Data stream” - SQL Server’s native protocol. With new release of &lt;a href=&quot;http://qt.nokia.com/downloads/sdk-windows-cpp&quot;&gt;Qt SDK&lt;/a&gt; there is a QSqlOdbc4 driver bundled. No TDS driver is available for Microsoft’s native protocol.
+&lt;!--more--&gt;
+It is quite easy to connect to DB without having to define a *[DSN]:”Data Source Name” first, just use proper connection string:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;DRIVER={SQL Native Client};SERVER=servername;DATABASE=databasename;UID=login;PWD=pass;
 &lt;/code&gt;&lt;/pre&gt;

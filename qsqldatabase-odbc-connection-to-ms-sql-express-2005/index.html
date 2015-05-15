@@ -60,9 +60,9 @@
           <a name="topofpage"></a>
           <p>In <a href="http://blog.marcingil.com/linux-odbc-to-mssql/">last post</a> I’ve written a recipe how to connect from Linux to Microsoft SQL Server Express using ODBC. Now, since I’m using Qt framework for app portability, it is the time to do the same on Windows.</p>
 
-<p>One can connect two ways to MS SQL: using ODBC or *[TDS]:”Tabular Data stream” - SQL Server’s native protocol. With new release of <a href="http://qt.nokia.com/downloads/sdk-windows-cpp">Qt SDK</a> there is a QSqlOdbc4 driver bundled. No TDS driver is available for Microsoft’s native protocol.</p>
-
-<p>It is quite easy to connect to DB without having to define a *[DSN]:”Data Source Name” first, just use proper connection string:</p>
+<p>One can connect two ways to MS SQL: using ODBC or *[TDS]:”Tabular Data stream” - SQL Server’s native protocol. With new release of <a href="http://qt.nokia.com/downloads/sdk-windows-cpp">Qt SDK</a> there is a QSqlOdbc4 driver bundled. No TDS driver is available for Microsoft’s native protocol.
+<!--more-->
+It is quite easy to connect to DB without having to define a *[DSN]:”Data Source Name” first, just use proper connection string:</p>
 
 <pre><code>DRIVER={SQL Native Client};SERVER=servername;DATABASE=databasename;UID=login;PWD=pass;
 </code></pre>

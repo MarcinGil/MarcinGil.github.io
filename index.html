@@ -197,26 +197,6 @@ It's fairly simple and you can even make it target architecture aware (separate 
 
 <p>One can connect two ways to MS SQL: using ODBC or *[TDS]:”Tabular Data stream” - SQL Server’s native protocol. With new release of <a href="http://qt.nokia.com/downloads/sdk-windows-cpp">Qt SDK</a> there is a QSqlOdbc4 driver bundled. No TDS driver is available for Microsoft’s native protocol.</p>
 
-<p>It is quite easy to connect to DB without having to define a *[DSN]:”Data Source Name” first, just use proper connection string:</p>
-
-<pre><code>DRIVER={SQL Native Client};SERVER=servername;DATABASE=databasename;UID=login;PWD=pass;
-</code></pre>
-
-<p>So, in case of default install of SQL Express we would have:</p>
-
-<pre><code>QString serverName = "localhost";
-QString dbName = "master";
-QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-QString dsn = QString("DRIVER={SQL Native Client};SERVER=%1;DATABASE=%2;UID=sa;PWD=;").arg(serverName).arg(dbName);
-db.setDatabaseName(dsn);
-db.open();
-</code></pre>
-
-<p><strong>Note:</strong> If you have installed the server with named instance just use form of <code>servername\namedinstance</code>.</p>
-
-<pre><code>QString serverName = "localhost\\mssqlexpress";
-</code></pre>
-
 
               <a class="read-more" href="/qsqldatabase-odbc-connection-to-ms-sql-express-2005/">Continue reading...</a>
             </section>
