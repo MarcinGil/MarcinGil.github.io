@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>When grass was greener</title>
+    <description>Rants on photography, life and everything
+</description>
+    <link>http://blog.marcingil.com/</link>
+    <atom:link href="http://blog.marcingil.com/feed.xml" rel="self" type="application/rss+xml" />
+    <pubDate>Fri, 15 May 2015 08:18:47 +0200</pubDate>
+    <lastBuildDate>Fri, 15 May 2015 08:18:47 +0200</lastBuildDate>
+    <generator>Jekyll v2.5.3</generator>
+    
+      <item>
+        <title>Android NDK: Link static library to your JNI library</title>
+        <description>&lt;p&gt;When you&#39;re developing an application that needs to use a custom, native precompiled library (the .a file) together with your gluing JNI interface maybe you&#39;re wondering how to link it.&lt;br /&gt;
+It&#39;s fairly simple and you can even make it target architecture aware (separate precompiled libraries for &lt;code&gt;arm&lt;/code&gt;, &lt;code&gt;arm-v7a&lt;/code&gt;, &lt;code&gt;x86&lt;/code&gt;).&lt;/p&gt;
+&lt;!--more--&gt;
+&lt;p&gt;In your module (I&#39;m using Android Studio) you should have a &lt;code&gt;jni&lt;/code&gt; directory, like this:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;project /
+  + module
+    + src
+      + main
+        + jni           # JNI source files here and other native sources here
+          | Android.mk
+          | Application.mk
+          | Xjni.c
+          + x86         # target x86 ABI directory
+            | libX.a    # x86 precompiled static library
+          + armeabi
+            | libX.a
+          + armeabi-v7a # and so forth
+          + mips
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now for the contents of &lt;code&gt;Android.mk&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;LOCAL_PATH := $(call my-dir)
+# prepare libX
+include $(CLEAR_VARS)
+LOCAL_MODULE    := libX
+LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libX.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+# build JNI
+include $(CLEAR_VARS)
+LOCAL_STATIC_LIBRARIES := X
+LOCAL_MODULE    := Xjni
+LOCAL_SRC_FILES := Xjni.c
+include $(BUILD_SHARED_LIBRARY)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now from the project root folder issue a command &lt;code&gt;NDK_PROJECT_PATH=module/src/main ndk-build&lt;/code&gt; and you&#39;re set. In the &lt;code&gt;module/src/main/libs&lt;/code&gt; directory you should have your compiled JNI library that will be copied by &lt;code&gt;gradle assemble&lt;/code&gt; to your APK. For all target ABIs.&lt;/p&gt;
+&lt;p&gt;Have fun!&lt;/p&gt;
+</description>
+        <pubDate>Mon, 03 Feb 2014 22:30:59 +0100</pubDate>
+        <link>http://blog.marcingil.com/android-ndk-link-static-library-to-your-jni-library/</link>
+        <guid isPermaLink="true">http://blog.marcingil.com/android-ndk-link-static-library-to-your-jni-library/</guid>
+        
+        <category>android</category>
+        
+        <category>c++</category>
+        
+        <category>java</category>
+        
+        
+        <category>android</category>
+        
+      </item>
+    
+      <item>
+        <title>Enable foreign keys on Android SQLite</title>
+        <description>&lt;p&gt;&lt;a href=&quot;http://en.wikipedia.org/wiki/Foreign_key&quot; title=&quot;Foreign key&quot;&gt;Foreign keys on database&lt;/a&gt; serve the purpose to enforce constraints, to maintain database integrity. Another purpose is that way one may implement &quot;table inheritance&quot; in SQL. You place common set of data in one table, specific info in set of tables and binding them via a foreign key. On Android most common way to operate on SQLite is to derive a class from `SQLiteOpenHelper`&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;public class ContentHelper extends SQLiteOpenHelper {
+    public void onCreate(SQLiteDatabase db) {
+        db.execSQL(some create table string);
+    }
+
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;!--more--&gt;
+&lt;p&gt;This is basic stuff that correctly extends &amp;#96;SQLiteOpenHelper&amp;#96;. &amp;#96;onCreate()&amp;#96; method is called after database file is established and connection open; database is ready to execute SQL queries. Due to that we need to enable foreign keys before executing any query creating a table. It is sufficient to put following code into beginning of this method:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;if (!db.isReadOnly()) {
+    // Enable foreign key constraints
+    db.execSQL(&quot;PRAGMA foreign_keys=ON;&quot;);
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The same code might be used on &lt;code&gt;onConfigure(SQLiteDatabase)&lt;/code&gt; but this is available since API 16. This method is called when the database connection is being configured, to enable features such as write-ahead logging or foreign key support.&lt;/p&gt;
+</description>
+        <pubDate>Thu, 05 Jul 2012 17:47:39 +0200</pubDate>
+        <link>http://blog.marcingil.com/enable-foreign-keys-on-android-sqlite/</link>
+        <guid isPermaLink="true">http://blog.marcingil.com/enable-foreign-keys-on-android-sqlite/</guid>
+        
+        <category>android</category>
+        
+        <category>java</category>
+        
+        
+        <category>android</category>
+        
+      </item>
+    
+      <item>
+        <title>How to create build numbers using Git commits</title>
+        <description>&lt;p&gt;Recently one of our test engineers asked if it would be possible to embed an increasing build number on &quot;About&quot; page in our mobile app. The purpose of such build number is to have a single reference point when reporting failed test suites or new problems in issue management tool (eg. &lt;a href=&quot;http://bugzilla.org&quot;&gt;Bugzilla&lt;/a&gt;). It is like a dogtag for software: useless for normal users and in daily use -- but much needed in case of emergency. And crashing software is an emergency.&lt;/p&gt;
+&lt;p&gt;At office we are not using any kind of continuous integration server (like &lt;a href=&quot;http://hudson-ci.org/&quot;&gt;Hudson CI&lt;/a&gt;) or separate build scripts for small projects. Such servers/scripts are usually configured to create build numbers themselves. For our purpose builds are prepared either by developer or tester in development environment and shared.&lt;/p&gt;
+&lt;!--more--&gt;
+&lt;h2&gt;Build number requirements&lt;/h2&gt;
+&lt;p&gt;Requirements for build numbers are simple:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;em&gt;Build numbers must be unique.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;Using the same source code clone/checkout must give the same build number.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;em&gt;Build numbers must reference a single point in project history.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;There can&#39;t be two different checkouts giving the same build number.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;em&gt;Build numbers must be increasing.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;Consecutive and iterative builds must show progress is build numbers. It would be best if they are strictly sequential (&lt;code&gt;N+1&lt;/code&gt;) but that&#39;s not a hard requirement. Usual approach to build numbers includes embedding date/hour and maybe some sequentially generated number. However if you have several builds a day then date-based number is insufficient. It does not identify uniquely a code version that was used to create the target. Thus you need something more specific.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;Solution for Git&lt;/h2&gt;
+&lt;p&gt;If Subversion is your VCS of choice, you are on the green. Just bring &lt;a href=&quot;http://svnbook.red-bean.com/en/1.1/re57.html&quot;&gt;&lt;code&gt;svnversion&lt;/code&gt;&lt;/a&gt; into play to get highest revision number from source files. You are done here.&lt;/p&gt;
+&lt;p&gt;Not so easy with Git.&lt;/p&gt;
+&lt;p&gt;Git uses SHA1 cryptographic hash to &quot;describe&quot; each of working tree states committed into repository. Using commit-sha as a build number will fail our requirement 3 completely. Given two commit-shas it is not possible to tell which is older and which is newer. We need more. Git scripts to the rescue. As a solution I have developed following &lt;code&gt;post-merge&lt;/code&gt; script:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;#!/bin/sh
+
+DIR=&#39;./&#39;
+count=`git rev-list HEAD | wc -l | sed -e &#39;s/ *//g&#39; | xargs -n1 printf %04d` (1)
+commit=`git show --abbrev-commit HEAD | grep &#39;^commit&#39; | sed -e &#39;s/commit //&#39;` (2)
+buildno=b&quot;$count.$commit&quot;
+echo $buildno &amp;gt; &quot;${DIR}/subdir/version.txt&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then contents of &lt;code&gt;version.txt&lt;/code&gt; are simply inserted into our source code.&lt;/p&gt;
+&lt;h3&gt;Detailed explanation&lt;/h3&gt;
+&lt;p&gt;Lines (1) and (2) of the script are working horses; they generate parts of the build number. Line (1) lists all commit-shas that build up revision specified by &lt;code&gt;HEAD&lt;/code&gt; (see &lt;a href=&quot;http://manpages.ubuntu.com/manpages/dapper/man1/git-rev-list.1.html&quot;&gt;rev-list&lt;/a&gt;), counts them and print as a 4 digit number. This fulfills our requirement 3.&lt;/p&gt;
+&lt;p&gt;Beware however that it is possible that two branches will have exactly the same number of commits even if they are totally different. Hence we need second part. Line (2) extracts &lt;code&gt;HEAD&lt;/code&gt; commit-sha in abbreviated form (see &lt;a href=&quot;http://manpages.ubuntu.com/manpages/oneiric/en/man1/git-show.1.html&quot;&gt;show&lt;/a&gt;); that is instead of using 40-digit commit-sha &lt;code&gt;show&lt;/code&gt; command evaluates shortest abbreviation possible that is still unique. Since Git is versioning whole tree states (and not single files) this fulfills our requirements 1 and 2. Combining both values we have unique and increasing build numbers.&lt;/p&gt;
+&lt;h3&gt;Why a post-merge script?&lt;/h3&gt;
+&lt;p&gt;Each developer/tester has to put this &lt;code&gt;post-merge&lt;/code&gt; script into &lt;code&gt;.git/hooks&lt;/code&gt; directory in his repository clone. I have tested different &lt;code&gt;post-&lt;/code&gt; hooks and this one seemed best. It is executed when you &lt;code&gt;pull&lt;/code&gt; from remote and source code has changed. In such case a merge must always occur: be it automatic merge, fast-forward or manual merge of conflicted code -- the &lt;code&gt;version.txt&lt;/code&gt; is always properly generated.&lt;/p&gt;
+&lt;h2&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;This solution is not perfect. First, each developer has to manually copy &lt;code&gt;post-merge&lt;/code&gt; script into git&#39;s &lt;code&gt;hooks&lt;/code&gt; directory. Second, when you merge your own branches it will be executed so you have to remember not to give private builds for testing. Third, a fully automated solution should possibly generate a build number on the repository server after commit. And last, you should probably use proper build system that will do it automatically. However, it has proven to be sufficient for our needs. Let&#39;s hear your opinions and feedback in comments!&lt;/p&gt;
+</description>
+        <pubDate>Thu, 03 Nov 2011 14:10:38 +0100</pubDate>
+        <link>http://blog.marcingil.com/creating-build-numbers-using-git-commits/</link>
+        <guid isPermaLink="true">http://blog.marcingil.com/creating-build-numbers-using-git-commits/</guid>
+        
+        <category>git</category>
+        
+        <category>release</category>
+        
+        
+        <category>tools</category>
+        
+      </item>
+    
+      <item>
+        <title>Starting Android application from browser URI</title>
+        <description>&lt;p&gt;Recently, when playing with adding &lt;a href=&quot;http://openid.net&quot;&gt;OpenID&lt;/a&gt; support to one of Android programs - namely &lt;a href=&quot;https://github.com/dentharg/tracks-android&quot;&gt;Tracks&lt;/a&gt; - I have faced a simple problem.&lt;/p&gt;
+&lt;p&gt;When using OpenID, one has to delegate authentication to some 3rd party website. This is OpenID Provider. Thanks to this our application (the Relaying Party) does not have to know identifier/password and user authenticates himself on a page he knows. Nor do we have to maintain the security of these in application.&lt;/p&gt;
+&lt;p&gt;So I&#39;ve started looking at &lt;a href=&quot;http://code.google.com/p/jopenid/wiki/QuickStart&quot;&gt;JOpenID&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;!--more--&gt;&lt;/p&gt;
+&lt;p&gt;The very first lines in JOpenID QuickStart say:&lt;/p&gt;
+&lt;p&gt;[cc lang=&quot;Java&quot;]OpenIdManager manager = new OpenIdManager();&lt;br /&gt;
+manager.setReturnTo(&quot;http://www.openid-example.com/openId&quot;);[/cc]&lt;/p&gt;
+&lt;p&gt;After successful login OpenProvider service will redirect browser to this return address together with  OpenID Identifier, encrypted association handler.&lt;/p&gt;
+&lt;p&gt;Question is: **how can we provide return address so we can start our application and *with resulting URL from browser*?**&lt;/p&gt;
+&lt;p&gt;&lt;!--more--&gt;&lt;/p&gt;
+&lt;p&gt;The answer lies in [intent filters](http://developer.android.com/guide/topics/manifest/intent-filter-element.html) of the `AndroidManifest.xml`. The [Intents](http://developer.android.com/guide/topics/intents/intents-filters.html) are the glue that cement the Android system, the juice that runs it. Intent system is responsible for starting Activities, interacting between applications and system services.&lt;/p&gt;
+&lt;p&gt;For each Activity one can declare which [intents](http://developer.android.com/reference/android/content/Intent.html) it shall interact with - that is, say which intents will activate it. This information is stored during application install and browsed by system when an intent is sent. &lt;/p&gt;
+&lt;p&gt;To *declare* what intents an activity will interact with, one needs to specify an [intent filter](http://developer.android.com/guide/topics/manifest/intent-filter-element.html). Such intent filter contains *action* and possibly *category* and *data* fields.&lt;/p&gt;
+&lt;p&gt;For example the main activity of application has a filter with *action* `android.intent.action.MAIN` and *category* `android.intent.category.LAUNCHER`. Thanks to this, Android system knows that application should appear in the menu (*category* = `launcher`) and is an entry point into application (*action* = `main`).&lt;/p&gt;
+&lt;p&gt;So I want to start my application from the browser using a URI. A URI looks like (in short) `scheme://host/path/?query#fragment`. Let&#39;s have a closer look at [*data* field of intent filter](http://developer.android.com/guide/topics/manifest/data-element.html):&lt;/p&gt;
+&lt;p&gt;[cc lang=&quot;xml&quot;]&lt;br /&gt;
+&lt;data android:host=&quot;string&quot; android:mimetype=&quot;string&quot; android:path=&quot;string&quot; android:pathpattern=&quot;string&quot; android:pathprefix=&quot;string&quot; android:port=&quot;string&quot; android:scheme=&quot;string&quot; /&gt;&lt;br /&gt;
+[/cc]&lt;/p&gt;
+&lt;p&gt;Looks similar.. And for starting app from browser it is sufficient to define only `scheme` part. Of course an action is needed for the filter: `android.intent.action.VIEW` is ok. But these two elements are not enough, categories are needed.&lt;/p&gt;
+&lt;p&gt;First of them is `CATEGORY_BROWSABLE`:&lt;/p&gt;
+&lt;blockquote&gt;&lt;p&gt;Activities that can be safely invoked from a browser must support this category. For example, if the user is viewing a web page or an e-mail and clicks on a link in the text, the Intent generated execute that link will require the BROWSABLE category, so that only activities supporting this category will be considered as possible actions. By supporting this category, you are promising that there is nothing damaging (without user intervention) that can happen by invoking any matching Intent.&lt;/p&gt;&lt;/blockquote&gt;
+&lt;p&gt;and `CATEGORY_DEFAULT`:&lt;/p&gt;
+&lt;blockquote&gt;&lt;p&gt;Set if the activity should be an option for the default action (center press) to perform on a piece of data. Setting this will hide from the user any activities without it set when performing an action on some data. Note that this is normal -not- set in the Intent when initiating an action -- it is for use in intent filters specified in packages.&lt;/p&gt;&lt;/blockquote&gt;
+&lt;p&gt;Bringing all this info together the `StartOnUri` activity is declared and intent-filter defined in the manifest:&lt;/p&gt;
+&lt;p&gt;[cc lang=&quot;xml&quot;]&lt;br /&gt;
+        &lt;activity android:name=&quot;.StartOnUri&quot; android:label=&quot;@string/app_name&quot;&gt;&lt;br /&gt;
+            &lt;intent-filter&gt;&lt;br /&gt;
+                &lt;data android:scheme=&quot;startonuri&quot; /&gt;&lt;br /&gt;
+                &lt;action android:name=&quot;android.intent.action.VIEW&quot; /&gt;&lt;br /&gt;
+                &lt;category android:name=&quot;android.intent.category.DEFAULT&quot;&gt;&lt;/category&gt;&lt;br /&gt;
+                &lt;category android:name=&quot;android.intent.category.BROWSABLE&quot;&gt;&lt;/category&gt;&lt;br /&gt;
+            &lt;/intent-filter&gt;&lt;br /&gt;
+        &lt;/activity&gt;&lt;br /&gt;
+[/cc]&lt;/p&gt;
+&lt;p&gt;To test it, it is sufficient to create a simple html file:&lt;/p&gt;
+&lt;p&gt;[cc lang=&quot;html&quot;]&lt;br /&gt;
+&lt;html&gt;&lt;br /&gt;
+&lt;body&gt;&lt;br /&gt;
+  &lt;a href=&quot;startonuri://dummy&quot;&gt;Click here&lt;/a&gt;&lt;br /&gt;
+&lt;/body&gt;&lt;br /&gt;
+&lt;/html&gt;&lt;br /&gt;
+[/cc]&lt;/p&gt;
+&lt;p&gt;and click on the &lt;strong&gt;Click here&lt;/strong&gt; link!&lt;/p&gt;
+&lt;p&gt;Remember to have INTERNET permission enabled for app.&lt;/p&gt;
+</description>
+        <pubDate>Tue, 15 Mar 2011 12:32:26 +0100</pubDate>
+        <link>http://blog.marcingil.com/starting-android-application-from-browser-uri/</link>
+        <guid isPermaLink="true">http://blog.marcingil.com/starting-android-application-from-browser-uri/</guid>
+        
+        <category>android</category>
+        
+        <category>java</category>
+        
+        <category>openid</category>
+        
+        
+        <category>android</category>
+        
+      </item>
+    
+      <item>
+        <title>QSqlDatabase ODBC connection to MS SQL Express 2005</title>
+        <description>&lt;p&gt;In &lt;a href=&quot;http://blog.marcingil.com/linux-odbc-to-mssql/&quot;&gt;last post&lt;/a&gt; I’ve written a recipe how to connect from Linux to Microsoft SQL Server Express using ODBC. Now, since I’m using Qt framework for app portability, it is the time to do the same on Windows.&lt;/p&gt;
+
+&lt;p&gt;One can connect two ways to MS SQL: using ODBC or *[TDS]:”Tabular Data stream” - SQL Server’s native protocol. With new release of &lt;a href=&quot;http://qt.nokia.com/downloads/sdk-windows-cpp&quot;&gt;Qt SDK&lt;/a&gt; there is a QSqlOdbc4 driver bundled. No TDS driver is available for Microsoft’s native protocol.&lt;/p&gt;
+
+&lt;p&gt;It is quite easy to connect to DB without having to define a *[DSN]:”Data Source Name” first, just use proper connection string:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;DRIVER={SQL Native Client};SERVER=servername;DATABASE=databasename;UID=login;PWD=pass;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So, in case of default install of SQL Express we would have:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;QString serverName = &quot;localhost&quot;;
+QString dbName = &quot;master&quot;;
+QSqlDatabase db = QSqlDatabase::addDatabase(&quot;QODBC&quot;);
+QString dsn = QString(&quot;DRIVER={SQL Native Client};SERVER=%1;DATABASE=%2;UID=sa;PWD=;&quot;).arg(serverName).arg(dbName);
+db.setDatabaseName(dsn);
+db.open();
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you have installed the server with named instance just use form of &lt;code&gt;servername\namedinstance&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;QString serverName = &quot;localhost\\mssqlexpress&quot;;
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+        <pubDate>Mon, 21 Dec 2009 11:06:45 +0100</pubDate>
+        <link>http://blog.marcingil.com/qsqldatabase-odbc-connection-to-ms-sql-express-2005/</link>
+        <guid isPermaLink="true">http://blog.marcingil.com/qsqldatabase-odbc-connection-to-ms-sql-express-2005/</guid>
+        
+        <category>database</category>
+        
+        <category>qt</category>
+        
+        
+        <category>c++</category>
+        
+        <category>programming</category>
+        
+      </item>
+    
+      <item>
+        <title>Linux ODBC connection to MS SQL on Virtual Box Windows</title>
+        <description>&lt;p&gt;For some time I was looking for a way to develop MS SQL connected application on Linux. I want to create a bridge between two applications and one of them stores data in Microsoft SQL. Since Kubuntu Linux is my development platform of choice I needed a way to be able to connect to the database from my system.&lt;/p&gt;
+&lt;p&gt;There are several obstacles to overcome, of which the most annoying is that you can&#39;t put MS SQL on Linux directly. There might be a dozen solutions to this (like having an additional Windows/MS SQL server) I prefer to keep all the needed things on my dev box.&lt;/p&gt;
+&lt;p&gt;Since I have Windows 7 RC downloaded and there&#39;s a free download of &lt;a href=&quot;http://www.microsoft.com/Sqlserver/2005/en/us/express.aspx&quot;&gt;Microsoft SQL Server Express 2005&lt;/a&gt; I decided to put Virtual Box to hard work for me.&lt;/p&gt;
+&lt;p&gt;&lt;!--more--&gt;&lt;/p&gt;
+&lt;h2&gt;VirtualBox with Windows 7&lt;/h2&gt;
+&lt;p&gt;First we need Virtualbox itself. Since I&#39;m on Kubuntu I&#39;ll use &lt;a href=&quot;http://www.virtualbox.org/wiki/Linux_Downloads&quot;&gt;the Debian Way&lt;/a&gt; to get it. It&#39;s easy from there: add deb source, apt-get update, apt-get install virtualbox-3.0.&lt;/p&gt;
+&lt;p&gt;Start VirtualBox and create a new virtual machine for Windows 7. Whether to use dynamic or fixed size hard disk is not important here. I personally used a 10G dynamic size drive.&lt;/p&gt;
+&lt;p&gt;All the settings can be left on default, except one: networking. MS SQL talks TCP and this is the simplest way to get working with. I&#39;ve used &lt;a href=&quot;http://www.virtualbox.org/manual/UserManual.html#network_hostonly&quot;&gt;&lt;em&gt;Host-only Adapter&lt;/em&gt;&lt;/a&gt; as Internet will not be accessed from virtualized Windows.&lt;/p&gt;
+&lt;p&gt;Startup VM and install Windows.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Remember to install &lt;em&gt;VirtualBox Guest Additions&lt;/em&gt;!&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;After this step we have working virtualized installation of Windows 7 and visible &lt;code&gt;vboxnet0&lt;/code&gt; network interface on Linux. This &lt;code&gt;vboxnet0&lt;/code&gt; is a gateway to virtual machines&#39; network.&lt;/p&gt;
+&lt;p&gt;To test it, check the IP of Windows 7 connection and ping it. For me it was &lt;em&gt;192.168.56.101&lt;/em&gt; and &lt;code&gt;vboxnet0&lt;/code&gt; has IP &lt;em&gt;192.168.56.1&lt;/em&gt;.&lt;/p&gt;
+&lt;h2&gt;Microsoft SQL installation and configuration&lt;/h2&gt;
+&lt;p&gt;To get MS SQL installation file from Linux host to Windows guest I used &lt;a href=&quot;http://www.virtualbox.org/manual/UserManual.html#sharedfolders&quot;&gt;VirtualBox shared folders&lt;/a&gt; functionality.&lt;/p&gt;
+&lt;p&gt;Next install MS SQL the usual way. There are only two things to watch out for:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;don&#39;t forget to install connectivity components&lt;/li&gt;
+&lt;li&gt;use &lt;em&gt;Mixed authentication&lt;/em&gt; (meaning both &lt;em&gt;Windows Authentication&lt;/em&gt; and &lt;em&gt;SQL authentication&lt;/em&gt;)&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Usually TCP connectivity is disabled for SQL server. We can use &lt;em&gt;SQL Server Configuration Manager&lt;/em&gt; (comes with the install) to turn it on.&lt;/p&gt;
+&lt;p&gt;By default Windows Firewall blocks all incoming connections and MS SQL is not on the &lt;em&gt;allowed&lt;/em&gt; list. Either you have to disable firewall completely or whitelist &lt;code&gt;sqlservr&lt;/code&gt; (&lt;em&gt;C:\Program Files\Microsoft SQL Server\MSSQL.1\MSSQL\Binn\sqlservr.exe&lt;/em&gt;) and &lt;code&gt;sqlbrowser&lt;/code&gt; (&lt;em&gt;C:\Program Files\Microsoft SQL Server\90\Shared\sqlbrowser.exe&lt;/em&gt;).&lt;/p&gt;
+&lt;p&gt;For hardcore testing you can install &lt;code&gt;nmap&lt;/code&gt; utility and check if port &lt;em&gt;1433&lt;/em&gt; is open (this is default UDP port for SQL browser):&lt;/p&gt;
+&lt;p&gt;[cc]$ sudo nmap -PN -sU -p 1433 192.168.56.101 [/cc]&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;If you don&#39;t know the &lt;code&gt;nmap&lt;/code&gt; tool, consult its manpage.&lt;/em&gt;&lt;/p&gt;
+&lt;h2&gt;TDS access configuration&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;http://en.wikipedia.org/wiki/Tabular_Data_Stream&quot;&gt;TDS&lt;/a&gt; is a protocol that Sybase and MSSQL databases use natively. Linux has a &lt;a href=&quot;http://www.freetds.org/&quot;&gt;FreeTDS&lt;/a&gt; library that knows how to speak that protocol and is used by other libraries and tools like ODBC.&lt;/p&gt;
+&lt;p&gt;Install it:&lt;/p&gt;
+&lt;p&gt;[cc]$ sudo apt-get install freetds-bin [/cc]&lt;/p&gt;
+&lt;p&gt;and we have all tools necessary to connect to our MSSQL instance.&lt;/p&gt;
+&lt;p&gt;We will configure SQL access only for ourselves, so all the settings go to &lt;code&gt;~/.freetds.conf&lt;/code&gt;:&lt;/p&gt;
+&lt;p&gt;&amp;#91;cc&amp;#93; &amp;#91;sqlexpress&amp;#93; host = 192.168.56.101 instance = SQLEXPRESS tds version = 8.0 [/cc]&lt;/p&gt;
+&lt;p&gt;A short explanation of above lines:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;This defines an alias, a block name, that will contain our connection parameters; choose what you want.&lt;/li&gt;
+&lt;li&gt;Name or IP of host that MS SQL sits on.&lt;/li&gt;
+&lt;li&gt;Named instance of MS SQL Server; For SQL Server 2005 Express it is SQLEXPRESS. If there&#39;s no named instance you can specify &lt;code&gt;port&lt;/code&gt; value, usually &lt;em&gt;1433&lt;/em&gt;.&lt;/li&gt;
+&lt;li&gt;TDS protocol version used by the database.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;Testing TDS connection&lt;/h3&gt;
+&lt;p&gt;With &lt;code&gt;freetds-bin&lt;/code&gt; packages comes &lt;code&gt;tsql&lt;/code&gt;:&lt;/p&gt;
+&lt;p&gt;[cc]$ tsql -S sqlexpress -U sa locale is &quot;en_US.UTF-8&quot; locale charset is &quot;UTF-8&quot; Password: 1&gt; [/cc]&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;-S&lt;/code&gt; parameter selects our named configuration and &lt;code&gt;-U&lt;/code&gt; is username. Default admin access to MS SQL server is &lt;code&gt;sa&lt;/code&gt; (&lt;em&gt;system administrator&lt;/em&gt;) with no password.&lt;/p&gt;
+&lt;p&gt;If you don&#39;t get the &lt;code&gt;1&amp;gt;&lt;/code&gt; prompt but instead you see a counter than it usually mean there&#39;s a problem connecting to the target host.&lt;/p&gt;
+&lt;p&gt;Enable debugging by setting &lt;code&gt;TDSDUMP&lt;/code&gt; to a log filepath:&lt;/p&gt;
+&lt;p&gt;[cc]$ TDSDUMP=~/freetds.log tsql -S sqlexpress -U sa [/cc]&lt;/p&gt;
+&lt;p&gt;and check the log file.&lt;/p&gt;
+&lt;h2&gt;ODBC Setup&lt;/h2&gt;
+&lt;p&gt;Since ODBC is quite standard way to connect to DBs we can use it for our software. In my Kubuntu &lt;code&gt;unixodbc&lt;/code&gt; package was already installed. For TDS ODBC driver install:&lt;/p&gt;
+&lt;p&gt;[cc]$ sudo apt-get install tdsodbc [/cc]&lt;/p&gt;
+&lt;p&gt;Next we need to define a driver configuration for TDS. The usual way is to prepare a driver config template. To do this create and edit a file eg.: &lt;code&gt;tds.driver.template&lt;/code&gt; with contents:&lt;/p&gt;
+&lt;p&gt;&amp;#91;cc&amp;#93; &amp;#91;FreeTDS&amp;#93; Description = Free Sybase &amp;amp; MS SQL Driver Driver = /usr/lib/odbc/libtdsodbc.so Setup = /usr/ilb/odbc/libtdsS.so [/cc]&lt;/p&gt;
+&lt;p&gt;and install this driver to ODBC:&lt;/p&gt;
+&lt;p&gt;[cc]$ sudo odbcinst -i -d -f tds.driver.template [/cc]&lt;/p&gt;
+&lt;p&gt;As a result a &lt;code&gt;/etc/odbcinst.ini&lt;/code&gt; should be created with additional &lt;em&gt;UsageCount = 1&lt;/em&gt; line. If not, create this file by hand eg. by copying &lt;code&gt;tds.driver.template&lt;/code&gt; and adding that line.&lt;/p&gt;
+&lt;p&gt;Next we need to create a &lt;abbr title=&quot;Data Source Name&quot;&gt;DSN&lt;/abbr&gt; for our connection. To check which files are read by unixODBC library in search for DSNs just run&lt;/p&gt;
+&lt;p&gt;[cc]$ odbcinst -j [/cc]&lt;/p&gt;
+&lt;p&gt;In my case system data sources (global DSNs) are in &lt;code&gt;/etc/odbc.ini&lt;/code&gt; and personal ones are in &lt;code&gt;~/.odbc.ini&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Contents of this file should be pretty self-explanatory:&lt;/p&gt;
+&lt;p&gt;&amp;#91;cc&amp;#93;&amp;#91;sqlexpress&amp;#93; Driver = FreeTDS Description = MS SQL Server 2005 at virtual W7 Trace = No Servername = sqlexpress Database = master [/cc]&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;Driver&lt;/code&gt; is an identifier taken from &lt;code&gt;/etc/odbcinst.ini&lt;/code&gt;; &lt;code&gt;Servername&lt;/code&gt; is identifier of our TDS connection from &lt;code&gt;.freetds.conf&lt;/code&gt;. As there are no custom databases on our server we connect to the &lt;code&gt;master&lt;/code&gt; DB.&lt;/p&gt;
+&lt;p&gt;Now test the connection (be sure to have W7 running!):&lt;/p&gt;
+&lt;p&gt;[cc]$ isql -v sqlexpress sa +&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|+ | Connected! | | | | sql-statement | | help [tablename] | | quit | | | +&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|&amp;#45;--|+ SQL&gt; [/cc]&lt;/p&gt;
+&lt;p&gt;If instead you have something like this:&lt;/p&gt;
+&lt;p&gt;&amp;#91;cc]$ isql -v sqlexpress sa [IM002&amp;#93;&amp;#91;unixODBC&amp;#93;[Driver Manager]Data source name not found, and no default driver specified [ISQL]ERROR: Could not SQLConnect [/cc]&lt;/p&gt;
+&lt;p&gt;be sure that each line in both &lt;code&gt;.freetds.conf&lt;/code&gt; and &lt;code&gt;.odbc.ini&lt;/code&gt; &lt;strong&gt;begins at column 0&lt;/strong&gt;.&lt;/p&gt;
+&lt;h2&gt;Connecting from Qt&lt;/h2&gt;
+&lt;p&gt;Now all this hard work can be put to some sensible use! We shall connect to our database from Qt framework. I&#39;ve used recent &lt;em&gt;4.5&lt;/em&gt; version present in Kubuntu Karmic repositories.&lt;/p&gt;
+&lt;p&gt;Create a simple Qt console application. Your &lt;code&gt;main&lt;/code&gt; should look similar to this:&lt;/p&gt;
+&lt;p&gt;[cc lang=&quot;c++&quot;] int main(int argc, char *argv[]) { QCoreApplication a(argc, argv);&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;QSqlDatabase db = QSqlDatabase::addDatabase(&quot;QODBC&quot;);
+db.setDatabaseName(&quot;sqlexpress&quot;);
+db.setUserName(&quot;sa&quot;);
+db.setPassword(&quot;&quot;);
+
+if (db.open()) {
+    qDebug(&quot;It worked&quot;);
+}
+else {
+    qDebug(&quot;FAIL&quot;);
+}
+
+return 0;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;} [/cc]&lt;/p&gt;
+&lt;p&gt;You should see &lt;em&gt;&quot;It worked&quot;&lt;/em&gt; at debug console when you run this code.&lt;/p&gt;
+&lt;h2&gt;Final thoughts&lt;/h2&gt;
+&lt;p&gt;By now we have a working virtualized Windows 7 with MS SQL server, we are able to connect to it using native TDS protocol and through ODBC. This connection can now be used from &lt;a href=&quot;http://php.net/manual/en/book.uodbc.php&quot;&gt;PHP&lt;/a&gt;, Qt, Ruby - you name it.&lt;/p&gt;
+</description>
+        <pubDate>Wed, 04 Nov 2009 10:58:24 +0100</pubDate>
+        <link>http://blog.marcingil.com/linux-odbc-to-mssql/</link>
+        <guid isPermaLink="true">http://blog.marcingil.com/linux-odbc-to-mssql/</guid>
+        
+        
+        <category>c++</category>
+        
+      </item>
+    
+      <item>
+        <title>Git: private repositories on shared hosting</title>
+        <description>&lt;p&gt;“You are a developer, software engineer, web designer, text writer… You want your files accessible from all the places (like a source for your project or a template for a website) - and you want to be sure that it is always the most up to date version…
+Sure you can drag those files along on a USB stick and copy it forth and back. You have those files even if there’s no Internet access. Important? Sure but…”&lt;/p&gt;
+
+&lt;p&gt;With &lt;a href=&quot;http://git.or.cz/gitwiki/WindowsInstall&quot; title=&quot;MinGW Git&quot;&gt;MinGW git&lt;/a&gt; port (no need for Cygwin!) - git now looks as a great alternative to both Subversion and Bazaar on Windows.&lt;/p&gt;
+
+&lt;p&gt;Let’s get things started.
+&lt;!--more--&gt;&lt;/p&gt;
+
+&lt;p&gt;Bazaar-NG is excellent choice, however it is a little tad slow on my shared hosting. While it is comparable at startup time on my Gentoo box it’s startup on Windows box at work can be counted in a few seconds for each command. Git just seems faster for every operation I run.&lt;/p&gt;
+
+&lt;h4 id=&quot;repository-creation&quot;&gt;Repository creation&lt;/h4&gt;
+
+&lt;p&gt;Let’s assume that you have your precious sources/documents/whatever in ~/src/mypreciousss. We need to create a git repository there and make an initial commit.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;cd ~/src/mypreciousss
+git init&amp;lt;br /&amp;gt;
+git add *&amp;lt;br /&amp;gt;
+git commit -m &quot;Initial commit&quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That’s it. You’ve got your repo (+workspace) up and running.&lt;/p&gt;
+
+&lt;h4 id=&quot;moving-repo-to-remote-host&quot;&gt;Moving repo to remote host&lt;/h4&gt;
+
+&lt;p&gt;Now it’s time to move the repo to shared hosting. This may seem a little bit awkward but it’s a little bit easier this way.
+As we don’t need our working copy on remote host let’s just clone the sole repo:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;cd ~/src
+git clone --bare mypreciousss mypreciousss.git
+touch mypreciousss.git/git-daemon-export-ok
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now you can just scp/ftp mypreciousss.git to any directory on remote host. I’ve set a ~/src/ directory on remote host so the address of repository will look like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ssh://user@remote.host.com/~/src/mypreciousss.git
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Next thing is to prepare git on shared hosting. This is due to fact, that - contrary to Bazaar ftp access - git needs itself available when using ssh:// protocol to access repository &lt;em&gt;(however the same applies for Bazaar’s bzr+ssh repository access; you need bzr command available for your shell)&lt;/em&gt;.
+Just grab it from git’s website, run usual configure+make+make install and make it available in the path (eg. by exporting modified PATH in ~/.bashrc).&lt;/p&gt;
+
+&lt;h4 id=&quot;testing&quot;&gt;Testing&lt;/h4&gt;
+
+&lt;p&gt;It’s time to test our remote repo. Just to make it a little bit more challenging remove both local repos:
+~~~
+rm -Rf ~/src/mypreciousss
+rm -Rf ~/src/mypreciousss.git
+~~~&lt;/p&gt;
+
+&lt;p&gt;And clone remote repository to local workspace:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;git clone ssh://user@remote.host.com/~/src/mypreciousss.git mypreciousss
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This should do it.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;However there’s one catch&lt;/em&gt;: on Linux boxen git will ask for a password for user@remote.host.com while on Windows not (MinGW version at least). This is a common problem. The solution is to have a public/private ssh key created and installed on shared hosting. It will also ease the pain of using authorized access since you either don’t have to remember password for you ssh key (passwordless keys) or use ssh-agent. Second solution is recommended.&lt;/p&gt;
+</description>
+        <pubDate>Mon, 03 Mar 2008 11:31:50 +0100</pubDate>
+        <link>http://blog.marcingil.com/git-private-repositories-on-shared-hosting/</link>
+        <guid isPermaLink="true">http://blog.marcingil.com/git-private-repositories-on-shared-hosting/</guid>
+        
+        <category>dscm</category>
+        
+        <category>git</category>
+        
+        
+        <category>tools</category>
+        
+      </item>
+    
+  </channel>
+</rss>

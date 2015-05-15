@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Starting Android application from browser URI</title>
+  <meta name="description" content="Rants on photography, life and everything
+" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="http://blog.marcingil.com/starting-android-application-from-browser-uri/">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+<a href="http://blog.marcingil.com" class="logo-readium"><span class="logo" style="background-image: url(/assets/images/author.jpg)"></span></a>
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="noarticleimage">
+          <div class="post-meta">
+            <h1 class="post-title">Starting Android application from browser URI</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person">Marcin Gil</h4>
+              on
+              <time datetime="2011-03-15T12:32:26+01:00">15 Mar 2011</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+          </div>
+        </div>
+        <br>
+        <br>
+        <br>
+        
+        <section class="post-content">
+          <div class="post-reading">
+            <span class="post-reading-time"></span> read
+          </div>
+          <a name="topofpage"></a>
+          <p>Recently, when playing with adding <a href="http://openid.net">OpenID</a> support to one of Android programs - namely <a href="https://github.com/dentharg/tracks-android">Tracks</a> - I have faced a simple problem.</p>
+<p>When using OpenID, one has to delegate authentication to some 3rd party website. This is OpenID Provider. Thanks to this our application (the Relaying Party) does not have to know identifier/password and user authenticates himself on a page he knows. Nor do we have to maintain the security of these in application.</p>
+<p>So I've started looking at <a href="http://code.google.com/p/jopenid/wiki/QuickStart">JOpenID</a>.</p>
+<p><!--more--></p>
+<p>The very first lines in JOpenID QuickStart say:</p>
+<p>[cc lang="Java"]OpenIdManager manager = new OpenIdManager();<br />
+manager.setReturnTo("http://www.openid-example.com/openId");[/cc]</p>
+<p>After successful login OpenProvider service will redirect browser to this return address together with  OpenID Identifier, encrypted association handler.</p>
+<p>Question is: **how can we provide return address so we can start our application and *with resulting URL from browser*?**</p>
+<p><!--more--></p>
+<p>The answer lies in [intent filters](http://developer.android.com/guide/topics/manifest/intent-filter-element.html) of the `AndroidManifest.xml`. The [Intents](http://developer.android.com/guide/topics/intents/intents-filters.html) are the glue that cement the Android system, the juice that runs it. Intent system is responsible for starting Activities, interacting between applications and system services.</p>
+<p>For each Activity one can declare which [intents](http://developer.android.com/reference/android/content/Intent.html) it shall interact with - that is, say which intents will activate it. This information is stored during application install and browsed by system when an intent is sent. </p>
+<p>To *declare* what intents an activity will interact with, one needs to specify an [intent filter](http://developer.android.com/guide/topics/manifest/intent-filter-element.html). Such intent filter contains *action* and possibly *category* and *data* fields.</p>
+<p>For example the main activity of application has a filter with *action* `android.intent.action.MAIN` and *category* `android.intent.category.LAUNCHER`. Thanks to this, Android system knows that application should appear in the menu (*category* = `launcher`) and is an entry point into application (*action* = `main`).</p>
+<p>So I want to start my application from the browser using a URI. A URI looks like (in short) `scheme://host/path/?query#fragment`. Let's have a closer look at [*data* field of intent filter](http://developer.android.com/guide/topics/manifest/data-element.html):</p>
+<p>[cc lang="xml"]<br />
+<data android:host="string" android:mimetype="string" android:path="string" android:pathpattern="string" android:pathprefix="string" android:port="string" android:scheme="string" /><br />
+[/cc]</p>
+<p>Looks similar.. And for starting app from browser it is sufficient to define only `scheme` part. Of course an action is needed for the filter: `android.intent.action.VIEW` is ok. But these two elements are not enough, categories are needed.</p>
+<p>First of them is `CATEGORY_BROWSABLE`:</p>
+<blockquote><p>Activities that can be safely invoked from a browser must support this category. For example, if the user is viewing a web page or an e-mail and clicks on a link in the text, the Intent generated execute that link will require the BROWSABLE category, so that only activities supporting this category will be considered as possible actions. By supporting this category, you are promising that there is nothing damaging (without user intervention) that can happen by invoking any matching Intent.</p></blockquote>
+<p>and `CATEGORY_DEFAULT`:</p>
+<blockquote><p>Set if the activity should be an option for the default action (center press) to perform on a piece of data. Setting this will hide from the user any activities without it set when performing an action on some data. Note that this is normal -not- set in the Intent when initiating an action -- it is for use in intent filters specified in packages.</p></blockquote>
+<p>Bringing all this info together the `StartOnUri` activity is declared and intent-filter defined in the manifest:</p>
+<p>[cc lang="xml"]<br />
+        <activity android:name=".StartOnUri" android:label="@string/app_name"><br />
+            <intent-filter><br />
+                <data android:scheme="startonuri" /><br />
+                <action android:name="android.intent.action.VIEW" /><br />
+                <category android:name="android.intent.category.DEFAULT"></category><br />
+                <category android:name="android.intent.category.BROWSABLE"></category><br />
+            </intent-filter><br />
+        </activity><br />
+[/cc]</p>
+<p>To test it, it is sufficient to create a simple html file:</p>
+<p>[cc lang="html"]<br />
+<html><br />
+<body><br />
+  <a href="startonuri://dummy">Click here</a><br />
+</body><br />
+</html><br />
+[/cc]</p>
+<p>and click on the <strong>Click here</strong> link!</p>
+<p>Remember to have INTERNET permission enabled for app.</p>
+
+        </section>
+        
+        <section class="post-comments">
+          <div id="disqus_thread">
+<script type="text/javascript">
+    /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+    var disqus_shortname = 'mgil';
+    
+    var disqus_identifier = '137 http://blog.marcingil.com/?p=137';
+    
+    var disqus_url = 'http://blog.marcingil.com/starting-android-application-from-browser-uri';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+
+        </section>
+        
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+                <a class="icon-twitter" href="http://twitter.com/share?text=Starting+Android+application+from+browser+URI&amp;url=http://blog.marcingil.com/starting-android-application-from-browser-uri"
+                  onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <i class="fa fa-twitter"></i><span class="hidden">twitter</span>
+                </a>
+              
+            
+              
+            
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4>Marcin Gil</h4>
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2011-03-15 12:32">15 Mar 2011</time></p>
+            </section>
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Supported by</span></h5>
+            <footer class="site-footer">
+              <section class="poweredby">Proudly published with <a href="http://jekyllrb.com"> Jekyll</a></section>
+              <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Marcin Gil</a> &copy; 2015<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/assets/images/cA4aKEIPQrerBnp1yGHv_IMG_9534-3-2.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">When grass was greener</h1>
+        <h2 class="blog-description">Rants on photography, life and everything
+</h2>
+        <a href="/" class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    
+      $window.on('scroll', function() {
+        var top = $window.scrollTop();
+
+        if (top < 0 || top > 1500) { return; }
+        $image
+          .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+          .css('opacity', 1-Math.max(top/700, 0));
+      });
+      $window.trigger('scroll');
+
+      var height = $('.article-image').height();
+      $('.post-content').css('padding-top', height + 'px');
+
+      $('a[href*=#]:not([href=#])').click(function() {
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+         && location.hostname == this.hostname) {
+          var target = $(this.hash);
+          target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            $('html,body').animate({ scrollTop: target.offset().top }, 500);
+            return false;
+          }
+        }
+      });
+
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>

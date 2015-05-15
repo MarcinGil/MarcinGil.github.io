@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>How to create build numbers using Git commits</title>
+  <meta name="description" content="Rants on photography, life and everything
+" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="http://blog.marcingil.com/creating-build-numbers-using-git-commits/">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+<a href="http://blog.marcingil.com" class="logo-readium"><span class="logo" style="background-image: url(/assets/images/author.jpg)"></span></a>
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="noarticleimage">
+          <div class="post-meta">
+            <h1 class="post-title">How to create build numbers using Git commits</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person">Marcin Gil</h4>
+              on
+              <time datetime="2011-11-03T14:10:38+01:00">03 Nov 2011</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+          </div>
+        </div>
+        <br>
+        <br>
+        <br>
+        
+        <section class="post-content">
+          <div class="post-reading">
+            <span class="post-reading-time"></span> read
+          </div>
+          <a name="topofpage"></a>
+          <p>Recently one of our test engineers asked if it would be possible to embed an increasing build number on "About" page in our mobile app. The purpose of such build number is to have a single reference point when reporting failed test suites or new problems in issue management tool (eg. <a href="http://bugzilla.org">Bugzilla</a>). It is like a dogtag for software: useless for normal users and in daily use -- but much needed in case of emergency. And crashing software is an emergency.</p>
+<p>At office we are not using any kind of continuous integration server (like <a href="http://hudson-ci.org/">Hudson CI</a>) or separate build scripts for small projects. Such servers/scripts are usually configured to create build numbers themselves. For our purpose builds are prepared either by developer or tester in development environment and shared.</p>
+<!--more-->
+<h2>Build number requirements</h2>
+<p>Requirements for build numbers are simple:</p>
+<ol>
+<li>
+<p><em>Build numbers must be unique.</em></p>
+<p>Using the same source code clone/checkout must give the same build number.</p>
+</li>
+<li>
+<p><em>Build numbers must reference a single point in project history.</em></p>
+<p>There can't be two different checkouts giving the same build number.</p>
+</li>
+<li>
+<p><em>Build numbers must be increasing.</em></p>
+<p>Consecutive and iterative builds must show progress is build numbers. It would be best if they are strictly sequential (<code>N+1</code>) but that's not a hard requirement. Usual approach to build numbers includes embedding date/hour and maybe some sequentially generated number. However if you have several builds a day then date-based number is insufficient. It does not identify uniquely a code version that was used to create the target. Thus you need something more specific.</p>
+</li>
+</ol>
+<h2>Solution for Git</h2>
+<p>If Subversion is your VCS of choice, you are on the green. Just bring <a href="http://svnbook.red-bean.com/en/1.1/re57.html"><code>svnversion</code></a> into play to get highest revision number from source files. You are done here.</p>
+<p>Not so easy with Git.</p>
+<p>Git uses SHA1 cryptographic hash to "describe" each of working tree states committed into repository. Using commit-sha as a build number will fail our requirement 3 completely. Given two commit-shas it is not possible to tell which is older and which is newer. We need more. Git scripts to the rescue. As a solution I have developed following <code>post-merge</code> script:</p>
+<pre><code>#!/bin/sh
+
+DIR='./'
+count=`git rev-list HEAD | wc -l | sed -e 's/ *//g' | xargs -n1 printf %04d` (1)
+commit=`git show --abbrev-commit HEAD | grep '^commit' | sed -e 's/commit //'` (2)
+buildno=b"$count.$commit"
+echo $buildno &gt; "${DIR}/subdir/version.txt"
+</code></pre>
+<p>Then contents of <code>version.txt</code> are simply inserted into our source code.</p>
+<h3>Detailed explanation</h3>
+<p>Lines (1) and (2) of the script are working horses; they generate parts of the build number. Line (1) lists all commit-shas that build up revision specified by <code>HEAD</code> (see <a href="http://manpages.ubuntu.com/manpages/dapper/man1/git-rev-list.1.html">rev-list</a>), counts them and print as a 4 digit number. This fulfills our requirement 3.</p>
+<p>Beware however that it is possible that two branches will have exactly the same number of commits even if they are totally different. Hence we need second part. Line (2) extracts <code>HEAD</code> commit-sha in abbreviated form (see <a href="http://manpages.ubuntu.com/manpages/oneiric/en/man1/git-show.1.html">show</a>); that is instead of using 40-digit commit-sha <code>show</code> command evaluates shortest abbreviation possible that is still unique. Since Git is versioning whole tree states (and not single files) this fulfills our requirements 1 and 2. Combining both values we have unique and increasing build numbers.</p>
+<h3>Why a post-merge script?</h3>
+<p>Each developer/tester has to put this <code>post-merge</code> script into <code>.git/hooks</code> directory in his repository clone. I have tested different <code>post-</code> hooks and this one seemed best. It is executed when you <code>pull</code> from remote and source code has changed. In such case a merge must always occur: be it automatic merge, fast-forward or manual merge of conflicted code -- the <code>version.txt</code> is always properly generated.</p>
+<h2>Conclusion</h2>
+<p>This solution is not perfect. First, each developer has to manually copy <code>post-merge</code> script into git's <code>hooks</code> directory. Second, when you merge your own branches it will be executed so you have to remember not to give private builds for testing. Third, a fully automated solution should possibly generate a build number on the repository server after commit. And last, you should probably use proper build system that will do it automatically. However, it has proven to be sufficient for our needs. Let's hear your opinions and feedback in comments!</p>
+
+        </section>
+        
+        <section class="post-comments">
+          <div id="disqus_thread">
+<script type="text/javascript">
+    /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+    var disqus_shortname = 'mgil';
+    
+    var disqus_identifier = '176 http://blog.marcingil.com/?p=176';
+    
+    var disqus_url = 'http://blog.marcingil.com/creating-build-numbers-using-git-commits';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+
+        </section>
+        
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+                <a class="icon-twitter" href="http://twitter.com/share?text=How+to+create+build+numbers+using+Git+commits&amp;url=http://blog.marcingil.com/creating-build-numbers-using-git-commits"
+                  onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <i class="fa fa-twitter"></i><span class="hidden">twitter</span>
+                </a>
+              
+            
+              
+            
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4>Marcin Gil</h4>
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2011-11-03 14:10">03 Nov 2011</time></p>
+            </section>
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Supported by</span></h5>
+            <footer class="site-footer">
+              <section class="poweredby">Proudly published with <a href="http://jekyllrb.com"> Jekyll</a></section>
+              <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Marcin Gil</a> &copy; 2015<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/assets/images/cA4aKEIPQrerBnp1yGHv_IMG_9534-3-2.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">When grass was greener</h1>
+        <h2 class="blog-description">Rants on photography, life and everything
+</h2>
+        <a href="/" class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    
+      $window.on('scroll', function() {
+        var top = $window.scrollTop();
+
+        if (top < 0 || top > 1500) { return; }
+        $image
+          .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+          .css('opacity', 1-Math.max(top/700, 0));
+      });
+      $window.trigger('scroll');
+
+      var height = $('.article-image').height();
+      $('.post-content').css('padding-top', height + 'px');
+
+      $('a[href*=#]:not([href=#])').click(function() {
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+         && location.hostname == this.hostname) {
+          var target = $(this.hash);
+          target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            $('html,body').animate({ scrollTop: target.offset().top }, 500);
+            return false;
+          }
+        }
+      });
+
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>
